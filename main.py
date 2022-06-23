@@ -1,43 +1,25 @@
+from forecast import get_hourly_forecast
 from dotenv import load_dotenv
-from dataclasses import dataclass
-from datetime import datetime
-import os
 import requests
+import os
 
 load_dotenv()
-OPEN_WEATHER_API = os.getenv('OPEN_WEATHER_API')
-MY_LOCATION = (42.628170, -83.329010)
-
-
-@dataclass
-class Forecast:
-    time: str
-    weather: dict
 
 
 def main():
-    params = {
-        'lat': MY_LOCATION[0],
-        'lon': MY_LOCATION[1],
-        'exclude': 'current,minutely,daily,alerts',
-        'appid': OPEN_WEATHER_API,
-    }
-    response = requests.get(
-        url='https://api.openweathermap.org/data/3.0/onecall',
-        params=params
-    )
-    response.raise_for_status()
+    bot_token = os.getenv('TELEGRAM_TOKEN')
+    bot_chat_id = os.getenv('TELEGRAM_CHAT_ID')
+    forecasts = get_hourly_forecast()
 
-    forecasts = []
+    for forecast in forecasts:
+        if forecast.weather == 'Rain':
+            message = f'{forecast.time}: It\'s going to rain! Make sure to bring an umbrella'
+            url = 'https://api.telegram.org/bot' + bot_token + '/sendMessage?chat_id=' \
+                  + bot_chat_id + '&parse_mode=Markdown&text=' + message
 
-    for entry in response.json()['hourly'][:12]:
-        forcast = Forecast(
-            time=datetime.fromtimestamp(entry['dt']).strftime('%I:%M %p'),
-            weather=entry['weather'],
-        )
-        forecasts.append(forcast)
-
-    print(forecasts)
+            response = requests.get(url)
+            response.raise_for_status()
+            break
 
 
 if __name__ == '__main__':
